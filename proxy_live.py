@@ -16,6 +16,9 @@ def live_playlist():
     content = resp.text
     decoded_lines = []
 
+    ts_urls = []
+
+    # Collect all decoded .ts URLs
     for line in content.splitlines():
         match = re.search(r"file=([A-Za-z0-9+/=]+)", line)
         if match:
@@ -25,13 +28,18 @@ def live_playlist():
                 encoded += "=" * (4 - missing_padding)
             try:
                 decoded_url = base64.b64decode(encoded).decode("utf-8")
-                decoded_lines.append(decoded_url)
+                ts_urls.append(decoded_url)
             except:
-                decoded_lines.append(line)
+                ts_urls.append(line)
         else:
             decoded_lines.append(line)
 
-    m3u8_content = "\n".join(decoded_lines)
-    return Response(m3u8_content, mimetype="application/vnd.apple.mpegurl")
+    # Serve everything except the last segment
+    if ts_urls:
+        ts_urls = ts_urls[:-1]
+
+    final_playlist = "\n".join(decoded_lines + ts_urls)
+    return Response(final_playlist, mimetype="application/vnd.apple.mpegurl")
+
 
 # Do NOT include app.run() for Vercel
